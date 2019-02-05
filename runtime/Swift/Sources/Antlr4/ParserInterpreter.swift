@@ -20,20 +20,21 @@
 /// 
 
 public class ParserInterpreter: Parser {
-    internal let grammarFileName: String
-    internal let atn: ATN
+    internal final var grammarFileName: String
+    internal final var atn: ATN
     /// This identifies StarLoopEntryState's that begin the (...)*
     /// precedence loops of left recursive rules.
     /// 
-    internal let statesNeedingLeftRecursionContext: BitSet
+    internal final var statesNeedingLeftRecursionContext: BitSet
 
     internal final var decisionToDFA: [DFA]
     // not shared like it is for generated parsers
-    internal let sharedContextCache = PredictionContextCache()
+    internal final var sharedContextCache: PredictionContextCache =
+    PredictionContextCache()
 
-    internal let ruleNames: [String]
+    internal final var ruleNames: [String]
 
-    private let vocabulary: Vocabulary
+    private final var vocabulary: Vocabulary
 
     /// Tracks LR rules for adjusting the contexts
     internal final var _parentContextStack: Array<(ParserRuleContext?, Int)> =
