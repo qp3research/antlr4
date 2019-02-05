@@ -73,11 +73,7 @@ ParseTreeVisitor.prototype.visit = function(ctx) {
 };
 
 ParseTreeVisitor.prototype.visitChildren = function(ctx) {
-	if (ctx.children) {
-		return this.visit(ctx.children);
-	} else {
-		return null;
-	}
+  return this.visit(ctx.children);
 }
 
 ParseTreeVisitor.prototype.visitTerminal = function(node) {
