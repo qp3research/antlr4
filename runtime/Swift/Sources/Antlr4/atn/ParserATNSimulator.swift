@@ -253,9 +253,9 @@ open class ParserATNSimulator: ATNSimulator {
 
     internal final unowned let parser: Parser
 
-    public private(set) final var decisionToDFA: [DFA]
+    public final var decisionToDFA: [DFA]
 
-    ///
+    /// 
     /// SLL, LL, or LL + exact ambig detection?
     /// 
 
@@ -581,19 +581,20 @@ open class ParserATNSimulator: ATNSimulator {
     /// 
    func computeTargetState(_ dfa: DFA, _ previousD: DFAState, _ t: Int) throws -> DFAState {
 
-        guard let reach = try computeReachSet(previousD.configs, t, false) else {
+        let reach = try computeReachSet(previousD.configs, t, false)
+        if reach == nil {
             addDFAEdge(dfa, previousD, t, ATNSimulator.ERROR)
             return ATNSimulator.ERROR
         }
 
         // create new target state; we'll add to DFA after it's complete
-        let D = DFAState(reach)
+        var D: DFAState = DFAState(reach!)
 
-        let predictedAlt = ParserATNSimulator.getUniqueAlt(reach)
+        let predictedAlt: Int = ParserATNSimulator.getUniqueAlt(reach!)
 
         if debug {
-            let altSubSets = PredictionMode.getConflictingAltSubsets(reach)
-            print("SLL altSubSets=\(altSubSets), configs=\(reach), predict=\(predictedAlt), allSubsetsConflict=\(PredictionMode.allSubsetsConflict(altSubSets)), conflictingAlts=\(getConflictingAlts(reach))")
+            let altSubSets = PredictionMode.getConflictingAltSubsets(reach!)
+            print("SLL altSubSets=\(altSubSets), configs=\(reach!), predict=\(predictedAlt), allSubsetsConflict=\(PredictionMode.allSubsetsConflict(altSubSets)), conflictingAlts=\(getConflictingAlts(reach!))")
         }
 
         if predictedAlt != ATN.INVALID_ALT_NUMBER {
@@ -602,9 +603,9 @@ open class ParserATNSimulator: ATNSimulator {
             D.configs.uniqueAlt = predictedAlt
             D.prediction = predictedAlt
         } else {
-            if PredictionMode.hasSLLConflictTerminatingPrediction(mode, reach) {
+            if PredictionMode.hasSLLConflictTerminatingPrediction(mode, reach!) {
                 // MORE THAN ONE VIABLE ALTERNATIVE
-                D.configs.conflictingAlts = getConflictingAlts(reach)
+                D.configs.conflictingAlts = getConflictingAlts(reach!)
                 D.requiresFullContext = true
                 // in SLL-only mode, we will stop at this state and return the minimum alt
                 D.isAcceptState = true
@@ -620,7 +621,8 @@ open class ParserATNSimulator: ATNSimulator {
         }
 
         // all adds to dfa are done after we've created full D state
-        return addDFAEdge(dfa, previousD, t, D)
+        D = addDFAEdge(dfa, previousD, t, D)!
+        return D
     }
 
     final func predicateDFAState(_ dfaState: DFAState, _ decisionState: DecisionState) {
@@ -1430,6 +1432,15 @@ open class ParserATNSimulator: ATNSimulator {
                 let continueCollecting = !(t is ActionTransition) && collectPredicates
                 let c = try getEpsilonTarget(config, t, continueCollecting, depth == 0, fullCtx, treatEofAsEpsilon)
                 if let c = c {
+                    if !t.isEpsilon() {
+                        // avoid infinite recursion for EOF* and EOF+
+                        if closureBusy.contains(c) {
+                             continue
+                        }else{
+                            closureBusy.insert(c)
+                        }
+                    }
+
                     var newDepth = depth
                     if config.state is RuleStopState {
                         assert(!fullCtx, "Expected: !fullCtx")
@@ -1438,6 +1449,14 @@ open class ParserATNSimulator: ATNSimulator {
                         // track how far we dip into outer context.  Might
                         // come in handy and we avoid evaluating context dependent
                         // preds if this is > 0.
+                        if closureBusy.contains(c) {
+                            //if (!closureBusy.insert(c)) {
+                            // avoid infinite recursion for right-recursive rules
+                            continue
+                        } else {
+                            closureBusy.insert(c)
+                        }
+
                         if let _dfa = _dfa , _dfa.isPrecedenceDfa() {
                             let outermostPrecedenceReturn: Int = (t as! EpsilonTransition).outermostPrecedenceReturn()
                             if outermostPrecedenceReturn == _dfa.atnStartState.ruleIndex {
@@ -1446,13 +1465,6 @@ open class ParserATNSimulator: ATNSimulator {
                         }
 
                         c.reachesIntoOuterContext += 1
-                        if closureBusy.contains(c) {
-                            // avoid infinite recursion for right-recursive rules
-                            continue
-                        } else {
-                            closureBusy.insert(c)
-                        }
-
                         configs.dipsIntoOuterContext = true // TODO: can remove? only care when we add to set per middle of this method
                         //print("newDepth=>\(newDepth)")
                         assert(newDepth > Int.min, "Expected: newDepth>Integer.MIN_VALUE")
@@ -1461,24 +1473,13 @@ open class ParserATNSimulator: ATNSimulator {
                         if debug {
                             print("dips into outer ctx: \(c)")
                         }
-                    }
-                    else {
-                        if !t.isEpsilon() {
-                            if closureBusy.contains(c) {
-                                // avoid infinite recursion for EOF* and EOF+
-                                continue
-                            }
-                            else {
-                                closureBusy.insert(c)
-                            }
+                    } else if t is RuleTransition {
+                        // latch when newDepth goes negative - once we step out of the entry context we can't return
+                        if newDepth >= 0 {
+                            newDepth += 1
                         }
 
-                        if t is RuleTransition {
-                            // latch when newDepth goes negative - once we step out of the entry context we can't return
-                            if newDepth >= 0 {
-                                newDepth += 1
-                            }
-                        }
+
                     }
 
                     try closureCheckingStopState(c, configs, &closureBusy, continueCollecting,
@@ -1720,7 +1721,7 @@ open class ParserATNSimulator: ATNSimulator {
                                     _ pt: PrecedencePredicateTransition,
                                     _ collectPredicates: Bool,
                                     _ inContext: Bool,
-                                    _ fullCtx: Bool) throws -> ATNConfig? {
+                                    _ fullCtx: Bool) throws -> ATNConfig {
         if debug {
             print("PRED (collectPredicates=\(collectPredicates)) \(pt.precedence)>=_p, ctx dependent=true")
             //if ( parser != nil ) {
@@ -1753,9 +1754,9 @@ open class ParserATNSimulator: ATNSimulator {
         }
 
         if debug {
-            print("config from pred transition=\(c?.description ?? "nil")")
+            print("config from pred transition=\(String(describing: c))")
         }
-        return c
+        return c!
     }
 
 
@@ -1795,7 +1796,7 @@ open class ParserATNSimulator: ATNSimulator {
         }
 
         if debug {
-            print("config from pred transition=\(c?.description ?? "nil")")
+            print("config from pred transition=\(String(describing: c))")
         }
         return c
     }
@@ -1803,7 +1804,7 @@ open class ParserATNSimulator: ATNSimulator {
 
     final func ruleTransition(_ config: ATNConfig, _ t: RuleTransition) -> ATNConfig {
         if debug {
-            print("CALL rule \(getRuleName(t.target.ruleIndex!)), ctx=\(config.context?.description ?? "nil")")
+            print("CALL rule \(getRuleName(t.target.ruleIndex!)), ctx=\(String(describing: config.context))")
         }
 
         let returnState = t.followState
@@ -1949,20 +1950,29 @@ open class ParserATNSimulator: ATNSimulator {
     /// - parameter t: The input symbol
     /// - parameter to: The target state for the edge
     /// 
-    /// - returns: the result of calling _#addDFAState_ on `to`
+    /// - returns: If `to` is `null`, this method returns `null`;
+    /// otherwise this method returns the result of calling _#addDFAState_
+    /// on `to`
     /// 
     @discardableResult
-    private final func addDFAEdge(_ dfa: DFA,
-                          _ from: DFAState,
+    final func addDFAEdge(_ dfa: DFA,
+                          _ from: DFAState?,
                           _ t: Int,
-                          _ to: DFAState) -> DFAState {
+                          _ to: DFAState?) -> DFAState? {
         var to = to
         if debug {
-            print("EDGE \(from) -> \(to) upon \(getTokenName(t))")
+            print("EDGE \(String(describing: from)) -> \(String(describing: to)) upon \(getTokenName(t))")
         }
 
-        to = addDFAState(dfa, to) // used existing if possible not incoming
-        if t < -1 || t > atn.maxTokenType {
+        if to == nil {
+            return nil
+        }
+
+        to = addDFAState(dfa, to!) // used existing if possible not incoming
+        if from == nil || t < -1 || t > atn.maxTokenType {
+            return to
+        }
+        guard let from = from else {
             return to
         }
         dfaStateMutex.synchronized {
@@ -1971,7 +1981,7 @@ open class ParserATNSimulator: ATNSimulator {
                 from.edges = [DFAState?](repeating: nil, count: self.atn.maxTokenType + 1 + 1)       //new DFAState[atn.maxTokenType+1+1];
             }
 
-            from.edges[t + 1] = to // connect
+            from.edges![t + 1] = to! // connect
         }
 
         if debug {
@@ -1996,14 +2006,14 @@ open class ParserATNSimulator: ATNSimulator {
     /// state if `D` is already in the DFA, or `D` itself if the
     /// state was not already present.
     /// 
-    private final func addDFAState(_ dfa: DFA, _ D: DFAState) -> DFAState {
+    final func addDFAState(_ dfa: DFA, _ D: DFAState) -> DFAState {
         if D == ATNSimulator.ERROR {
             return D
         }
         
         return dfaStatesMutex.synchronized {
             if let existing = dfa.states[D] {
-                return existing
+                return existing!
             }
 
             D.stateNumber = dfa.states.count

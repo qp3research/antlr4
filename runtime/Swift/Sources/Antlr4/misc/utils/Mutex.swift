@@ -35,8 +35,4 @@ class Mutex {
         return try closure()
     }
 
-    deinit {
-        // free the mutex resource
-        pthread_mutex_destroy(&mutex)
-    }
 }

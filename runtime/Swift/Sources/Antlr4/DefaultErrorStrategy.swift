@@ -32,22 +32,6 @@ open class DefaultErrorStrategy: ANTLRErrorStrategy {
 
     open var lastErrorStates: IntervalSet?
 
-    /**
-     * This field is used to propagate information about the lookahead following
-     * the previous match. Since prediction prefers completing the current rule
-     * to error recovery efforts, error reporting may occur later than the
-     * original point where it was discoverable. The original context is used to
-     * compute the true expected sets as though the reporting occurred as early
-     * as possible.
-     */
-    open var nextTokensContext: ParserRuleContext?
-
-    /**
-     * @see #nextTokensContext
-     */
-    open var nextTokensState = ATNState.INVALID_STATE_NUMBER
-
-
     public init() {
     }
 
@@ -223,20 +207,7 @@ open class DefaultErrorStrategy: ANTLRErrorStrategy {
 
         // try cheaper subset first; might get lucky. seems to shave a wee bit off
         let nextToks = recognizer.getATN().nextTokens(s)
-        if nextToks.contains(la) {
-            // We are sure the token matches
-            nextTokensContext = nil
-            nextTokensState = ATNState.INVALID_STATE_NUMBER
-            return
-        }
-
-        if nextToks.contains(CommonToken.EPSILON) {
-            if nextTokensContext == nil {
-                    // It's possible the next token won't match; information tracked
-                    // by sync is restricted for performance.
-                    nextTokensContext = recognizer.getContext()
-                    nextTokensState = recognizer.getState()
-            }
+        if nextToks.contains(CommonToken.EPSILON) || nextToks.contains(la) {
             return
         }
 
@@ -303,9 +274,8 @@ open class DefaultErrorStrategy: ANTLRErrorStrategy {
     /// - parameter e: the recognition exception
     /// 
     open func reportInputMismatch(_ recognizer: Parser, _ e: InputMismatchException) {
-        let tok = getTokenErrorDisplay(e.getOffendingToken())
-        let expected = e.getExpectedTokens()?.toString(recognizer.getVocabulary()) ?? "<missing>"
-        let msg = "mismatched input \(tok) expecting \(expected)"
+        let msg = "mismatched input " + getTokenErrorDisplay(e.getOffendingToken()) +
+                " expecting " + e.getExpectedTokens()!.toString(recognizer.getVocabulary())
         recognizer.notifyErrorListeners(e.getOffendingToken(), msg, e)
     }
 
@@ -453,8 +423,7 @@ open class DefaultErrorStrategy: ANTLRErrorStrategy {
             return try getMissingSymbol(recognizer)
         }
         // even that didn't work; must throw the exception
-        let exn = InputMismatchException(recognizer, state: nextTokensState, ctx: nextTokensContext)
-        throw ANTLRException.recognition(e: exn)
+        throw ANTLRException.recognition(e: InputMismatchException(recognizer))
     }
 
     /// 
