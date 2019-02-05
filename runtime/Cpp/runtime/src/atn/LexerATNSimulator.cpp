@@ -154,7 +154,7 @@ size_t LexerATNSimulator::execATN(CharStream *input, dfa::DFAState *ds0) {
       target = computeTargetState(input, s, t);
     }
 
-    if (target == DFAStateError.get()) {
+    if (target == ERROR.get()) {
       break;
     }
 
@@ -210,11 +210,11 @@ dfa::DFAState *LexerATNSimulator::computeTargetState(CharStream *input, dfa::DFA
       // we got nowhere on t, don't throw out this knowledge; it'd
       // cause a failover from DFA later.
       delete reach;
-      addDFAEdge(s, t, DFAStateError.get());
+      addDFAEdge(s, t, ERROR.get());
     }
 
     // stop when we can't match any more char
-    return DFAStateError.get();
+    return ERROR.get();
   }
 
   // Add an edge from s to target DFA found/created for reach
