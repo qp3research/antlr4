@@ -176,14 +176,13 @@ size_t ParserATNSimulator::execATN(dfa::DFA &dfa, dfa::DFAState *s0, TokenStream
       // ATN states in SLL implies LL will also get nowhere.
       // If conflict in states that dip out, choose min since we
       // will get error no matter what.
-      NoViableAltException e = noViableAlt(input, outerContext, previousD->configs.get(), startIndex);
       input->seek(startIndex);
       size_t alt = getSynValidOrSemInvalidAltThatFinishedDecisionEntryRule(previousD->configs.get(), outerContext);
       if (alt != ATN::INVALID_ALT_NUMBER) {
         return alt;
       }
 
-      throw e;
+      throw noViableAlt(input, outerContext, previousD->configs.get(), startIndex);
     }
 
     if (D->requiresFullContext && _mode != PredictionMode::SLL) {
@@ -351,25 +350,27 @@ size_t ParserATNSimulator::execATNWithFullContext(dfa::DFA &dfa, dfa::DFAState *
       // ATN states in SLL implies LL will also get nowhere.
       // If conflict in states that dip out, choose min since we
       // will get error no matter what.
-      NoViableAltException e = noViableAlt(input, outerContext, previous, startIndex);
       input->seek(startIndex);
       size_t alt = getSynValidOrSemInvalidAltThatFinishedDecisionEntryRule(previous, outerContext);
       if (alt != ATN::INVALID_ALT_NUMBER) {
         return alt;
       }
-      throw e;
+      throw noViableAlt(input, outerContext, previous, startIndex);
     }
+
     if (previous != s0) // Don't delete the start set.
-        delete previous;
+      delete previous;
     previous = nullptr;
 
     std::vector<BitSet> altSubSets = PredictionModeClass::getConflictingAltSubsets(reach.get());
     reach->uniqueAlt = getUniqueAlt(reach.get());
+
     // unique prediction?
     if (reach->uniqueAlt != ATN::INVALID_ALT_NUMBER) {
       predictedAlt = reach->uniqueAlt;
       break;
     }
+
     if (_mode != PredictionMode::LL_EXACT_AMBIG_DETECTION) {
       predictedAlt = PredictionModeClass::resolvesToJustOneViableAlt(altSubSets);
       if (predictedAlt != ATN::INVALID_ALT_NUMBER) {
@@ -698,27 +699,22 @@ std::vector<Ref<SemanticContext>> ParserATNSimulator::getPredsForAmbigAlts(const
 }
 
 std::vector<dfa::DFAState::PredPrediction *> ParserATNSimulator::getPredicatePredictions(const antlrcpp::BitSet &ambigAlts,
-  std::vector<Ref<SemanticContext>> altToPred) {
-  std::vector<dfa::DFAState::PredPrediction*> pairs;
-  bool containsPredicate = false;
-  for (size_t i = 1; i < altToPred.size(); i++) {
-    Ref<SemanticContext> pred = altToPred[i];
+  std::vector<Ref<SemanticContext>> const& altToPred) {
+  bool containsPredicate = std::find_if(altToPred.begin(), altToPred.end(), [](Ref<SemanticContext> const context) {
+    return context != SemanticContext::NONE;
+  }) != altToPred.end();
+  if (!containsPredicate)
+    return {};
 
-    // unpredicted is indicated by SemanticContext.NONE
-    assert(pred != nullptr);
+  std::vector<dfa::DFAState::PredPrediction*> pairs;
+  for (size_t i = 1; i < altToPred.size(); ++i) {
+    Ref<SemanticContext> const& pred = altToPred[i];
+    assert(pred != nullptr); // unpredicted is indicated by SemanticContext.NONE
 
     if (ambigAlts.test(i)) {
       pairs.push_back(new dfa::DFAState::PredPrediction(pred, (int)i)); /* mem-check: managed by the DFAState it will be assigned to after return */
     }
-    if (pred != SemanticContext::NONE) {
-      containsPredicate = true;
-    }
   }
-
-  if (!containsPredicate) {
-    pairs.clear();
-  }
-
   return pairs;
 }
 
