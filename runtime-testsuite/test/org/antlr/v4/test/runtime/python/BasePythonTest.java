@@ -514,10 +514,7 @@ public abstract class BasePythonTest implements RuntimeTestSupport {
 	}
 
 	private String locateTool(String tool) {
-		String[] roots = {
-			"/opt/local/bin", "/usr/bin/", "/usr/local/bin/",
-		    "/Users/"+System.getProperty("user.name")+"/anaconda3/bin/"
-		};
+		String[] roots = { "/opt/local/bin", "/usr/bin/", "/usr/local/bin/" };
 		for(String root : roots) {
 			if(new File(root + tool).exists()) {
 				return root+tool;

@@ -66,6 +66,8 @@
 /// 
 /// 
 public class ATNState: Hashable, CustomStringConvertible {
+    public static let INITIAL_NUM_TRANSITIONS: Int = 4
+
     // constants for serialization
     public static let INVALID_TYPE: Int = 0
     public static let BASIC: Int = 1
@@ -105,22 +107,23 @@ public class ATNState: Hashable, CustomStringConvertible {
     /// 
     public final var atn: ATN? = nil
 
-    public internal(set) final var stateNumber: Int = INVALID_STATE_NUMBER
+    public final var stateNumber: Int = INVALID_STATE_NUMBER
 
-    public internal(set) final var ruleIndex: Int?
+    public final var ruleIndex: Int?
     // at runtime, we don't have Rule objects
 
-    public private(set) final var epsilonOnlyTransitions: Bool = false
+    public final var epsilonOnlyTransitions: Bool = false
 
     /// 
     /// Track the transitions emanating from this ATN state.
     /// 
-    internal private(set) final var transitions = [Transition]()
+    internal final var transitions: Array<Transition> = Array<Transition>()
+    //Array<Transition>(INITIAL_NUM_TRANSITIONS);
 
     /// 
     /// Used to cache lookahead during parsing, not used during construction
     /// 
-    public internal(set) final var nextTokenWithinRule: IntervalSet?
+    public final var nextTokenWithinRule: IntervalSet?
 
 
     public var hashValue: Int {
@@ -146,33 +149,21 @@ public class ATNState: Hashable, CustomStringConvertible {
     }
 
     public final func addTransition(_ e: Transition) {
+        addTransition(transitions.count, e)
+    }
+
+    public final func addTransition(_ index: Int, _ e: Transition) {
         if transitions.isEmpty {
             epsilonOnlyTransitions = e.isEpsilon()
-        }
-        else if epsilonOnlyTransitions != e.isEpsilon() {
-            print("ATN state %d has both epsilon and non-epsilon transitions.\n", String(stateNumber))
-            epsilonOnlyTransitions = false
-        }
+        } else {
+            if epsilonOnlyTransitions != e.isEpsilon() {
 
-        var alreadyPresent = false
-        for t in transitions {
-            if t.target.stateNumber == e.target.stateNumber {
-                if let tLabel = t.labelIntervalSet(), let eLabel = e.labelIntervalSet(), tLabel == eLabel {
-//                    print("Repeated transition upon \(eLabel) from \(stateNumber)->\(t.target.stateNumber)")
-                    alreadyPresent = true
-                    break
-                }
-                else if t.isEpsilon() && e.isEpsilon() {
-//                    print("Repeated epsilon transition from \(stateNumber)->\(t.target.stateNumber)")
-                    alreadyPresent = true
-                    break
-                }
+                print("ATN state %d has both epsilon and non-epsilon transitions.\n", String(stateNumber))
+                epsilonOnlyTransitions = false
             }
         }
+        transitions.insert(e, at: index)
 
-        if !alreadyPresent {
-            transitions.append(e)
-        }
     }
 
     public final func transition(_ i: Int) -> Transition {

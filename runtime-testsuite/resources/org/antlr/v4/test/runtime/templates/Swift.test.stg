@@ -1,6 +1,6 @@
-writeln(s) ::= <<print((<s>) ?? "nil")>>
+writeln(s) ::= <<print(<s>)>>
 
-write(s) ::= <<print((<s>) ?? "nil", terminator: "")>>
+write(s) ::= <<print(<s>, terminator: "")>>
 
 False() ::= "false"
 

@@ -36,7 +36,7 @@ public class CommonTokenFactory: TokenFactory {
     /// The default value is `false` to avoid the performance and memory
     /// overhead of copying text for every token unless explicitly requested.
     /// 
-    internal let copyText: Bool
+    internal final var copyText: Bool
 
     /// 
     /// Constructs a _org.antlr.v4.runtime.CommonTokenFactory_ with the specified value for
