@@ -34,11 +34,22 @@ public class LookupATNConfig: Hashable {
 }
 
 public func ==(lhs: LookupATNConfig, rhs: LookupATNConfig) -> Bool {
+
+
     if lhs.config === rhs.config {
         return true
     }
 
-    return lhs.config.state.stateNumber == rhs.config.state.stateNumber &&
+    if (lhs is OrderedATNConfig) && (rhs is OrderedATNConfig) {
+        return lhs.config == rhs.config
+    }
+
+
+    let same: Bool =
+    lhs.config.state.stateNumber == rhs.config.state.stateNumber &&
             lhs.config.alt == rhs.config.alt &&
             lhs.config.semanticContext == rhs.config.semanticContext
+
+    return same
+
 }

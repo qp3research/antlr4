@@ -12,15 +12,26 @@ public final class RuleTransition: Transition {
     /// 
     /// Ptr to the rule definition object for this rule ref
     /// 
-    public let ruleIndex: Int
+    public final var ruleIndex: Int
     // no Rule object at runtime
 
-    public let precedence: Int
+    public final var precedence: Int
 
     /// 
     /// What node to begin computations following ref to rule
     /// 
-    public let followState: ATNState
+    public final var followState: ATNState
+
+    /// 
+    /// -  Use
+    /// _#RuleTransition(org.antlr.v4.runtime.atn.RuleStartState, int, int, org.antlr.v4.runtime.atn.ATNState)_ instead.
+    /// 
+    //@Deprecated
+    public convenience init(_ ruleStart: RuleStartState,
+                            _ ruleIndex: Int,
+                            _ followState: ATNState) {
+        self.init(ruleStart, ruleIndex, 0, followState)
+    }
 
     public init(_ ruleStart: RuleStartState,
                 _ ruleIndex: Int,
