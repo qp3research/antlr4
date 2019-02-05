@@ -25,11 +25,11 @@ public class Vocabulary: Hashable {
     public static let EMPTY_VOCABULARY: Vocabulary = Vocabulary(EMPTY_NAMES, EMPTY_NAMES, EMPTY_NAMES)
 
 
-    private let literalNames: [String?]
+    private final var literalNames: [String?]
 
-    private let symbolicNames: [String?]
+    private final var symbolicNames: [String?]
 
-    private let displayNames: [String?]
+    private final var displayNames: [String?]
 
     /// 
     /// Constructs a new instance of _org.antlr.v4.runtime.Vocabulary_ from the specified

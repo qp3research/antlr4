@@ -57,12 +57,7 @@ public final class MurmurHash {
     /// - Returns: the updated intermediate hash value
     /// 
     public static func update2(_ hashIn: UInt32, _ value: Int) -> UInt32 {
-        return updateInternal(hashIn, UInt32(truncatingIfNeeded: value))
-    }
-
-
-    private static func updateInternal(_ hashIn: UInt32, _ value: UInt32) -> UInt32 {
-        let k = calcK(value)
+        let k = calcK(UInt32(truncatingIfNeeded: value))
         var hash = hashIn
         hash = hash ^ k
         hash = (hash << r2) | (hash >> (32 - r2))
@@ -152,7 +147,7 @@ public final class MurmurHash {
             word |= UInt32(bytes[i + 2]) << 16
             word |= UInt32(bytes[i + 3]) << 24
 
-            hash = updateInternal(hash, word)
+            hash = update(hash, word)
         }
         let remaining = byteCount & 3
         if remaining != 0 {
