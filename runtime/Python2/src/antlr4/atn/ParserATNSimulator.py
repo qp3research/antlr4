@@ -1145,6 +1145,11 @@ class ParserATNSimulator(ATNSimulator):
             continueCollecting = collectPredicates and not isinstance(t, ActionTransition)
             c = self.getEpsilonTarget(config, t, continueCollecting, depth == 0, fullCtx, treatEofAsEpsilon)
             if c is not None:
+                if not t.isEpsilon:
+                    if c in closureBusy:
+                        # avoid infinite recursion for EOF* and EOF+
+                        continue
+                    closureBusy.add(c)
                 newDepth = depth
                 if isinstance( config.state, RuleStopState):
                     # target fell off end of rule; mark resulting c as having dipped into outer context
@@ -1153,28 +1158,23 @@ class ParserATNSimulator(ATNSimulator):
                     # come in handy and we avoid evaluating context dependent
                     # preds if this is > 0.
 
-                    if self._dfa is not None and self._dfa.precedenceDfa:
-                        if t.outermostPrecedenceReturn == self._dfa.atnStartState.ruleIndex:
-                            c.precedenceFilterSuppressed = True
-                    c.reachesIntoOuterContext += 1
                     if c in closureBusy:
                         # avoid infinite recursion for right-recursive rules
                         continue
                     closureBusy.add(c)
+
+                    if self._dfa is not None and self._dfa.precedenceDfa:
+                        if t.outermostPrecedenceReturn == self._dfa.atnStartState.ruleIndex:
+                            c.precedenceFilterSuppressed = True
+                    c.reachesIntoOuterContext += 1
                     configs.dipsIntoOuterContext = True # TODO: can remove? only care when we add to set per middle of this method
                     newDepth -= 1
                     if ParserATNSimulator.debug:
                         print("dips into outer ctx: " + str(c))
-                else:
-                    if not t.isEpsilon:
-                        if c in closureBusy:
-                            # avoid infinite recursion for EOF* and EOF+
-                            continue
-                        closureBusy.add(c)
-                    if isinstance(t, RuleTransition):
-                        # latch when newDepth goes negative - once we step out of the entry context we can't return
-                        if newDepth >= 0:
-                            newDepth += 1
+                elif isinstance(t, RuleTransition):
+                    # latch when newDepth goes negative - once we step out of the entry context we can't return
+                    if newDepth >= 0:
+                        newDepth += 1
 
                 self.closureCheckingStopState(c, configs, closureBusy, continueCollecting, fullCtx, newDepth, treatEofAsEpsilon)
 
@@ -1603,15 +1603,17 @@ class ParserATNSimulator(ATNSimulator):
 
     def reportAttemptingFullContext(self, dfa, conflictingAlts, configs, startIndex, stopIndex):
         if ParserATNSimulator.debug or ParserATNSimulator.retry_debug:
+            interval = range(startIndex, stopIndex + 1)
             print("reportAttemptingFullContext decision=" + str(dfa.decision) + ":" + str(configs) +
-                               ", input=" + self.parser.getTokenStream().getText(startIndex, stopIndex + 1))
+                               ", input=" + self.parser.getTokenStream().getText(interval))
         if self.parser is not None:
             self.parser.getErrorListenerDispatch().reportAttemptingFullContext(self.parser, dfa, startIndex, stopIndex, conflictingAlts, configs)
 
     def reportContextSensitivity(self, dfa, prediction, configs, startIndex, stopIndex):
         if ParserATNSimulator.debug or ParserATNSimulator.retry_debug:
+            interval = range(startIndex, stopIndex + 1)
             print("reportContextSensitivity decision=" + str(dfa.decision) + ":" + str(configs) +
-                               ", input=" + self.parser.getTokenStream().getText(startIndex, stopIndex + 1))
+                               ", input=" + self.parser.getTokenStream().getText(interval))
         if self.parser is not None:
             self.parser.getErrorListenerDispatch().reportContextSensitivity(self.parser, dfa, startIndex, stopIndex, prediction, configs)
 
@@ -1635,8 +1637,9 @@ class ParserATNSimulator(ATNSimulator):
 #				}
 #				i++;
 #			}
-             print("reportAmbiguity " + str(ambigAlts) + ":" + str(configs) +
-                               ", input=" + self.parser.getTokenStream().getText(startIndex, stopIndex + 1))
+            interval = range(startIndex, stopIndex + 1)
+            print("reportAmbiguity " + str(ambigAlts) + ":" + str(configs) +
+                               ", input=" + self.parser.getTokenStream().getText(interval))
         if self.parser is not None:
             self.parser.getErrorListenerDispatch().reportAmbiguity(self.parser, dfa, startIndex, stopIndex, exact, ambigAlts, configs)
 

@@ -7,7 +7,6 @@
 package org.antlr.v4.codegen.model;
 
 import org.antlr.runtime.RecognitionException;
-import org.antlr.runtime.tree.CommonTree;
 import org.antlr.runtime.tree.CommonTreeNodeStream;
 import org.antlr.v4.codegen.OutputModelFactory;
 import org.antlr.v4.codegen.model.decl.AltLabelStructDecl;
@@ -33,7 +32,6 @@ import org.antlr.v4.tool.Rule;
 import org.antlr.v4.tool.ast.ActionAST;
 import org.antlr.v4.tool.ast.AltAST;
 import org.antlr.v4.tool.ast.GrammarAST;
-import org.antlr.v4.tool.ast.PredAST;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -45,7 +43,6 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.antlr.v4.parse.ANTLRParser.RULE_REF;
-import static org.antlr.v4.parse.ANTLRParser.STRING_LITERAL;
 import static org.antlr.v4.parse.ANTLRParser.TOKEN_REF;
 
 /** */
@@ -169,7 +166,7 @@ public class RuleFunction extends OutputModelObject {
 	}
 
 	/** for all alts, find which ref X or r needs List
-	   Must see across alts. If any alt needs X or r as list, then
+	   Must see across alts.  If any alt needs X or r as list, then
 	   define as list.
 	 */
 	public Set<Decl> getDeclsForAllElements(List<AltAST> altASTs) {
@@ -177,24 +174,21 @@ public class RuleFunction extends OutputModelObject {
 		Set<String> nonOptional = new HashSet<String>();
 		List<GrammarAST> allRefs = new ArrayList<GrammarAST>();
 		boolean firstAlt = true;
-		IntervalSet reftypes = new IntervalSet(RULE_REF, TOKEN_REF, STRING_LITERAL);
 		for (AltAST ast : altASTs) {
-			List<GrammarAST> refs = getRuleTokens(ast.getNodesWithType(reftypes));
+			IntervalSet reftypes = new IntervalSet(RULE_REF, TOKEN_REF);
+			List<GrammarAST> refs = ast.getNodesWithType(reftypes);
 			allRefs.addAll(refs);
 			Pair<FrequencySet<String>, FrequencySet<String>> minAndAltFreq = getElementFrequenciesForAlt(ast);
 			FrequencySet<String> minFreq = minAndAltFreq.a;
 			FrequencySet<String> altFreq = minAndAltFreq.b;
 			for (GrammarAST t : refs) {
-				String refLabelName = getName(t);
+				String refLabelName = t.getText();
+				if ( altFreq.count(refLabelName)>1 ) {
+					needsList.add(refLabelName);
+				}
 
-				if (refLabelName != null) {
-					if (altFreq.count(refLabelName) > 1) {
-						needsList.add(refLabelName);
-					}
-
-					if (firstAlt && minFreq.count(refLabelName) != 0) {
-						nonOptional.add(refLabelName);
-					}
+				if (firstAlt && minFreq.count(refLabelName) != 0) {
+					nonOptional.add(refLabelName);
 				}
 			}
 
@@ -208,12 +202,7 @@ public class RuleFunction extends OutputModelObject {
 		}
 		Set<Decl> decls = new LinkedHashSet<Decl>();
 		for (GrammarAST t : allRefs) {
-			String refLabelName = getName(t);
-
-			if (refLabelName == null) {
-				continue;
-			}
-
+			String refLabelName = t.getText();
 			List<Decl> d = getDeclForAltElement(t,
 												refLabelName,
 												needsList.contains(refLabelName),
@@ -221,35 +210,6 @@ public class RuleFunction extends OutputModelObject {
 			decls.addAll(d);
 		}
 		return decls;
-	}
-
-	private List<GrammarAST> getRuleTokens(List<GrammarAST> refs) {
-		List<GrammarAST> result = new ArrayList<>(refs.size());
-		for (GrammarAST ref : refs) {
-			CommonTree r = ref;
-
-			boolean ignore = false;
-			while (r != null) {
-				// Ignore string literals in predicates
-				if (r instanceof PredAST) {
-					ignore = true;
-					break;
-				}
-				r = r.parent;
-			}
-
-			if (!ignore) {
-				result.add(ref);
-			}
-		}
-
-		return result;
-	}
-
-	private String getName(GrammarAST token) {
-		String tokenText = token.getText();
-		String tokenName = token.getType() != STRING_LITERAL ? tokenText : token.g.getTokenName(tokenText);
-		return tokenName == null || tokenName.startsWith("T__") ? null : tokenName; // Do not include tokens with auto generated names
 	}
 
 	/** Given list of X and r refs in alt, compute how many of each there are */
