@@ -31,27 +31,27 @@
 /// meaning that state was reached via a different set of rule invocations.
 /// 
 
-public final class DFAState: Hashable, CustomStringConvertible {
-    public internal(set) var stateNumber = -1
+public class DFAState: Hashable, CustomStringConvertible {
+    public var stateNumber = -1
 
-    public internal(set) var configs: ATNConfigSet
+    public var configs = ATNConfigSet()
 
     /// 
     /// `edges[symbol]` points to target of symbol. Shift up by 1 so (-1)
     /// _org.antlr.v4.runtime.Token#EOF_ maps to `edges[0]`.
     ///
-    public internal(set) var edges: [DFAState?]!
+    public var edges: [DFAState?]!
 
-    public internal(set) var isAcceptState = false
+    public var isAcceptState = false
 
     /// 
     /// if accept state, what ttype do we match or alt do we predict?
     /// This is set to _org.antlr.v4.runtime.atn.ATN#INVALID_ALT_NUMBER_ when _#predicates_`!=null` or
     /// _#requiresFullContext_.
     /// 
-    public internal(set) var prediction = 0
+    public var prediction = 0
 
-    public internal(set) var lexerActionExecutor: LexerActionExecutor?
+    public var lexerActionExecutor: LexerActionExecutor!
 
     /// 
     /// Indicates that this state was created during SLL prediction that
@@ -59,7 +59,7 @@ public final class DFAState: Hashable, CustomStringConvertible {
     /// _org.antlr.v4.runtime.atn.ParserATNSimulator#execATN_ invocations immediately jumped doing
     /// full context prediction if this field is true.
     /// 
-    public internal(set) var requiresFullContext = false
+    public var requiresFullContext = false
 
     /// 
     /// During SLL parsing, this is a list of predicates associated with the
@@ -75,16 +75,16 @@ public final class DFAState: Hashable, CustomStringConvertible {
     /// This list is computed by _org.antlr.v4.runtime.atn.ParserATNSimulator#predicateDFAState_.
     /// 
 
-    public internal(set) var predicates: [PredPrediction]?
+    public var predicates: [PredPrediction]?
 
     /// 
     /// Map a predicate to a predicted alternative.
     /// 
 
-    public final class PredPrediction: CustomStringConvertible {
-        public let pred: SemanticContext
+    public class PredPrediction: CustomStringConvertible {
+        public final var pred: SemanticContext
         // never null; at least SemanticContext.NONE
-        public let alt: Int
+        public final var alt: Int
 
         public init(_ pred: SemanticContext, _ alt: Int) {
             self.alt = alt
@@ -94,6 +94,13 @@ public final class DFAState: Hashable, CustomStringConvertible {
         public var description: String {
             return "(\(pred),\(alt))"
         }
+    }
+
+    public init() {
+    }
+
+    public init(_ stateNumber: Int) {
+        self.stateNumber = stateNumber
     }
 
     public init(_ configs: ATNConfigSet) {
@@ -115,6 +122,19 @@ public final class DFAState: Hashable, CustomStringConvertible {
         return MurmurHash.finish(hash, 1)
     }
 
+    /// 
+    /// Two _org.antlr.v4.runtime.dfa.DFAState_ instances are equal if their ATN configuration sets
+    /// are the same. This method is used to see if a state already exists.
+    /// 
+    /// Because the number of alternatives and number of ATN configurations are
+    /// finite, there is a finite number of DFA states that can be processed.
+    /// This is necessary to show that the algorithm terminates.
+    /// 
+    /// Cannot test the DFA state numbers here because in
+    /// _org.antlr.v4.runtime.atn.ParserATNSimulator#addDFAState_ we need to know if any other state
+    /// exists that has this exact set of ATN configurations. The
+    /// _#stateNumber_ is irrelevant.
+    ///
     public var description: String {
         var buf = "\(stateNumber):\(configs)"
         if isAcceptState {
@@ -130,19 +150,6 @@ public final class DFAState: Hashable, CustomStringConvertible {
     }
 }
 
-///
-/// Two _org.antlr.v4.runtime.dfa.DFAState_ instances are equal if their ATN configuration sets
-/// are the same. This method is used to see if a state already exists.
-///
-/// Because the number of alternatives and number of ATN configurations are
-/// finite, there is a finite number of DFA states that can be processed.
-/// This is necessary to show that the algorithm terminates.
-///
-/// Cannot test the DFA state numbers here because in
-/// _org.antlr.v4.runtime.atn.ParserATNSimulator#addDFAState_ we need to know if any other state
-/// exists that has this exact set of ATN configurations. The
-/// _#stateNumber_ is irrelevant.
-///
 public func ==(lhs: DFAState, rhs: DFAState) -> Bool {
     if lhs === rhs {
         return true

@@ -9,12 +9,12 @@ public class LexerNoViableAltException: RecognitionException, CustomStringConver
     /// 
     /// Matching attempted at what input index?
     /// 
-    private let startIndex: Int
+    private final var startIndex: Int
 
     /// 
     /// Which configurations did we try at input.index() that couldn't match input.LA(1)?
     /// 
-    private let deadEndConfigs: ATNConfigSet
+    private final var deadEndConfigs: ATNConfigSet
 
     public init(_ lexer: Lexer?,
                 _ input: CharStream,
