@@ -11,7 +11,7 @@
 /// 
 
 public class SetTransition: Transition, CustomStringConvertible {
-    public let set: IntervalSet
+    public final var set: IntervalSet
 
     // TODO (sam): should we really allow null here?
     public init(_ target: ATNState, _ set: IntervalSet) {

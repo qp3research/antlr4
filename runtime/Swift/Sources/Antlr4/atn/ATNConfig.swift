@@ -37,7 +37,7 @@ public class ATNConfig: Hashable, CustomStringConvertible {
     /// with this config.  We track only those contexts pushed during
     /// execution of the ATN simulator.
     /// 
-    public internal(set) final var context: PredictionContext?
+    public final var context: PredictionContext?
 
     /// 
     /// We cannot execute predicates dependent upon local context unless
@@ -62,14 +62,31 @@ public class ATNConfig: Hashable, CustomStringConvertible {
     /// _org.antlr.v4.runtime.atn.ATNConfigSet#add(org.antlr.v4.runtime.atn.ATNConfig, DoubleKeyMap)_ method are
     /// __completely__ unaffected by the change.
     /// 
-    public internal(set) final var reachesIntoOuterContext: Int = 0
+    public final var reachesIntoOuterContext: Int = 0
+    //=0 intital by janyou
+
 
     public final let semanticContext: SemanticContext
+
+    public init(_ old: ATNConfig) {
+        // dup
+        self.state = old.state
+        self.alt = old.alt
+        self.context = old.context
+        self.semanticContext = old.semanticContext
+        self.reachesIntoOuterContext = old.reachesIntoOuterContext
+    }
+
+    public convenience init(_ state: ATNState,
+                            _ alt: Int,
+                            _ context: PredictionContext?) {
+        self.init(state, alt, context, SemanticContext.NONE)
+    }
 
     public init(_ state: ATNState,
                 _ alt: Int,
                 _ context: PredictionContext?,
-                _ semanticContext: SemanticContext = SemanticContext.NONE) {
+                _ semanticContext: SemanticContext) {
         self.state = state
         self.alt = alt
         self.context = context

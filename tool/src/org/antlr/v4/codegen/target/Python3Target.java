@@ -24,27 +24,26 @@ import java.util.Set;
  */
 public class Python3Target extends Target {
 	protected static final String[] python3Keywords = {
-		"abs", "all", "and", "any", "apply", "as", "assert",
-		"bin", "bool", "break", "buffer", "bytearray",
-		"callable", "chr", "class", "classmethod", "coerce", "compile", "complex", "continue",
-		"def", "del", "delattr", "dict", "dir", "divmod",
-		"elif", "else", "enumerate", "eval", "execfile", "except",
-		"file", "filter", "finally", "float", "for", "format", "from", "frozenset",
-		"getattr", "global", "globals",
+		"abs", "all", "any", "apply", "as",
+		"bin", "bool", "buffer", "bytearray",
+		"callable", "chr", "classmethod", "coerce", "compile", "complex",
+		"del", "delattr", "dict", "dir", "divmod",
+		"enumerate", "eval", "execfile",
+		"file", "filter", "float", "format", "frozenset",
+		"getattr", "globals",
 		"hasattr", "hash", "help", "hex",
-		"id", "if", "import", "in", "input", "int", "intern", "is", "isinstance", "issubclass", "iter",
-		"lambda", "len", "list", "locals",
-		"map", "max", "min", "memoryview",
-		"next", "nonlocal", "not",
-		"object", "oct", "open", "or", "ord",
-		"pass", "pow", "print", "property",
-		"raise", "range", "raw_input", "reduce", "reload", "repr", "return", "reversed", "round",
+		"id", "input", "int", "intern", "isinstance", "issubclass", "iter",
+		"len", "list", "locals",
+		"map", "max", "min", "next",
+		"memoryview",
+		"object", "oct", "open", "ord",
+		"pow", "print", "property",
+		"range", "raw_input", "reduce", "reload", "repr", "return", "reversed", "round",
 		"set", "setattr", "slice", "sorted", "staticmethod", "str", "sum", "super",
-		"try", "tuple", "type",
+		"tuple", "type",
 		"unichr", "unicode",
 		"vars",
-		"with", "while",
-		"yield",
+		"with",
 		"zip",
 		"__import__",
 		"True", "False", "None"
@@ -97,7 +96,7 @@ public class Python3Target extends Target {
 
 	@Override
 	public String getVersion() {
-		return "4.7.2";
+		return "4.7.1";
 	}
 
 	/** Avoid grammar symbols in this set to prevent conflicts in gen'd code. */

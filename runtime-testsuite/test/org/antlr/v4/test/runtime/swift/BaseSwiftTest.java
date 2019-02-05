@@ -279,6 +279,7 @@ public class BaseSwiftTest implements RuntimeTestSupport {
 						"    }\n" +
 						"}\n" +
 						"\n" +
+						"do {\n" +
 						"let args = CommandLine.arguments\n" +
 						"let input = try ANTLRFileStream(args[1])\n" +
 						"let lex = <lexerName>(input)\n" +
@@ -288,7 +289,12 @@ public class BaseSwiftTest implements RuntimeTestSupport {
 						"<profile>\n" +
 						"let tree = try parser.<parserStartRuleName>()\n" +
 						"<if(profile)>print(profiler.getDecisionInfo().description)<endif>\n" +
-						"try ParseTreeWalker.DEFAULT.walk(TreeShapeListener(), tree)\n"
+						"try ParseTreeWalker.DEFAULT.walk(TreeShapeListener(), tree)\n" +
+						"}catch ANTLRException.recognition(let e )   {\n" +
+						"    print(\"error occur\\(e)\")\n" +
+						"}catch {\n" +
+						"    print(\"error occur\")\n" +
+						"}\n"
 		);
 		ST createParserST = new ST("       let parser = try <parserName>(tokens)\n");
 		if (debug) {
@@ -323,7 +329,13 @@ public class BaseSwiftTest implements RuntimeTestSupport {
 						"let lex = <lexerName>(input)\n" +
 						"let tokens = CommonTokenStream(lex)\n" +
 
-						"try tokens.fill()\n" +
+						"do {\n" +
+						"	try tokens.fill()\n" +
+						"} catch ANTLRException.recognition(let e )   {\n" +
+						"	print(\"error occur\\(e)\")\n" +
+						"} catch {\n" +
+						"	print(\"error occur\")\n" +
+						"}\n" +
 
 						"for t in tokens.getTokens() {\n" +
 						"	print(t)\n" +
